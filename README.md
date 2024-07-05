@@ -54,10 +54,10 @@ pip install -r requirements.txt
 ## 사용법
 .env 파일과 .streamlit/secrets.toml 에서 프로젝트를 실행하는데 필요한 API_KEY를 지정해줍니다.
 
-# OPENAI_API_KEY
+OPENAI_API_KEY
 [Open Ai](https://platform.openai.com/api-keys) : GPT를 사용하기 위한 key 발급
 
-# LANGCHAIN_API_KEY
+LANGCHAIN_API_KEY
 [Langsmith](https://smith.langchain.com/o/77c5a6a5-2792-56e1-ac37-fe1d529f8673/settings) : langsmith를 활용한 답변 생성 과정을 추적하기 위한 key 발급
 
 
