@@ -1,11 +1,11 @@
-# 프로젝트 이름
-Watson
+# TRPG AI Game Master
 
-프로젝트의 간단한 설명을 여기에 작성합니다.
+TRPG 게임의 사회자 역할을 대체하는 AI입니다. LangChain과 Streamlit을 활용하여 실시간으로 게임을 진행하고, 플레이어와 상호작용할 수 있는 기능을 제공합니다.
 
 ## 목차
 
 - [소개](#소개)
+- [기술 스택](#기술-스택)
 - [설치](#설치)
 - [사용법](#사용법)
 - [기여](#기여)
@@ -14,7 +14,18 @@ Watson
 
 ## 소개
 
-프로젝트에 대한 자세한 설명과 배경, 목적 등을 작성합니다. 이 프로젝트가 무엇을 하는지, 왜 중요한지, 주요 기능은 무엇인지 설명합니다.
+TRPG AI Game Master는 전통적인 TRPG(Tabletop Role-Playing Game)에서 사회자의 역할을 인공지능으로 대체하는 프로젝트입니다. 이 AI는 플레이어와 상호작용하고, 스토리를 생성하며, 게임의 진행을 돕습니다. 주요 기능은 다음과 같습니다:
+- 플레이어와의 대화 및 상호작용
+- 게임 스토리 생성 및 전개
+- 실시간 게임 진행 및 상태 관리
+
+## 기술 스택
+
+이 프로젝트에서 사용되는 주요 기술 스택은 다음과 같습니다:
+- [Python](https://www.python.org/): 주요 프로그래밍 언어
+- [LangChain](https://langchain.com/): 언어 모델 체인 프레임워크
+- [Streamlit](https://streamlit.io/): 웹 애플리케이션 프레임워크
+- [OpenAI GPT-4](https://openai.com/research/gpt-4): 언어 모델
 
 ## 설치
 
@@ -22,17 +33,22 @@ Watson
 
 ```bash
 # 클론 명령어
-git clone https://github.com/사용자명/저장소이름.git
+git clone https://github.com/사용자명/트리포지-에이아이-게임-마스터.git
 
 # 프로젝트 디렉토리로 이동
-cd 저장소이름
+cd 트리포지-에이아이-게임-마스터
+
+# 가상 환경 생성
+python -m venv venv
+
+# 가상 환경 활성화
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 
 # 필요한 의존성 설치
-npm install
-# 또는
 pip install -r requirements.txt
 
-# 프로젝트 실행
-npm start
-# 또는
-python main.py
+# Streamlit 애플리케이션 실행
+streamlit run app.py
