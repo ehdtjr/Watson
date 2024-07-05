@@ -1,6 +1,11 @@
 import streamlit as st
 from langchain_openai import ChatOpenAI
 from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+# .env 파일을 로드합니다.
+load_dotenv()
 
 # from langchain_teddynote import logging
 from langchain_teddynote import logging
@@ -116,4 +121,4 @@ with st.spinner("Loading AI..."):
         st.session_state.messages.append({"role": "assistant", "content": response})
         # Display assistant message in chat message container
         with st.chat_message("assistant"):
-            st.markdown(response.content)
+            st.markdown(response)
