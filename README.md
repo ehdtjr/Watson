@@ -28,7 +28,7 @@ TRPG AI Game Master는 전통적인 TRPG(Tabletop Role-Playing Game)에서 사�
 
 ## 설치
 
-프로젝트를 설치하고 실행하는데 필요한 환경을 설정합니다.
+프로젝트를 설치하고 실행하는데 필요한 의존성을 설치합니다.
 
 ```bash
 # 프로젝트 생성 및 진입
@@ -49,6 +49,19 @@ source venv/bin/activate
 
 # 필요한 의존성 설치
 pip install -r requirements.txt
+```
+
+## 사용법
+.env 파일과 .streamlit/secrets.toml 에서 프로젝트를 실행하는데 필요한 API_KEY를 지정해줍니다.
+```bash
+# OPENAI_API_KEY
+[open ai](https://platform.openai.com/api-keys)
+
+# LANGCHAIN_API_KEY
+[langsmith](https://smith.langchain.com/o/77c5a6a5-2792-56e1-ac37-fe1d529f8673/settings)
+
+```
+
 
 ## 실행
 
