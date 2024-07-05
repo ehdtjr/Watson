@@ -3,6 +3,10 @@ from langchain_openai import ChatOpenAI
 from openai import OpenAI
 
 # from langchain_teddynote import logging
+from langchain_teddynote import logging
+
+# 프로젝트 이름을 입력합니다.
+logging.langsmith("watson")
 
 # 플레이어 정보 정의
 job = ["형사", "형사", "교수", "탐정"]
@@ -34,12 +38,13 @@ Answer:
 """
 
 # OpenAI API 클라이언트를 초기화합니다.
-# llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
-llm = ChatOpenAI(
-    model_name="xionic-1-72b-20240610",
-    base_url="https://sionic.chat/v1/",
-    api_key="934c4bbc-c384-4bea-af82-1450d7f8128d",
-)
+llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
+
+# llm = ChatOpenAI(
+#     model_name="xionic-1-72b-20240610",
+#     base_url="https://sionic.chat/v1/",
+#     api_key="934c4bbc-c384-4bea-af82-1450d7f8128d",
+# )
 
 st.title("Call of Cthulhu")
 
@@ -105,11 +110,10 @@ with st.spinner("Loading AI..."):
         )
 
         # AI 응답을 가져옵니다.
-        # response = llm.invoke(user_input).content
-        response = llm.invoke(user_input)
+        response = llm.invoke(user_input).content
 
         # Add assistant message to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response.content})
+        st.session_state.messages.append({"role": "assistant", "content": response})
         # Display assistant message in chat message container
         with st.chat_message("assistant"):
             st.markdown(response.content)
