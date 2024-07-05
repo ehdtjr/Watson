@@ -8,9 +8,8 @@ TRPG 게임의 사회자 역할을 대체하는 AI입니다. LangChain과 Stream
 - [기술 스택](#기술-스택)
 - [설치](#설치)
 - [사용법](#사용법)
-- [기여](#기여)
-- [라이선스](#라이선스)
-- [연락처](#연락처)
+- [실행](#실행)
+
 
 ## 소개
 
@@ -29,17 +28,18 @@ TRPG AI Game Master는 전통적인 TRPG(Tabletop Role-Playing Game)에서 사�
 
 ## 설치
 
-프로젝트를 설치하고 실행하는 방법을 설명합니다.
+프로젝트를 설치하고 실행하는데 필요한 환경을 설정합니다.
 
 ```bash
-# 클론 명령어
-git clone https://github.com/사용자명/트리포지-에이아이-게임-마스터.git
+# 프로젝트 생성 및 진입
+mkdir [프로젝트 파일명]
+cd [프로젝트 파일명]
 
-# 프로젝트 디렉토리로 이동
-cd 트리포지-에이아이-게임-마스터
+# 클론 명령어
+git clone https://github.com/ehdtjr/Watson.git
 
 # 가상 환경 생성
-python -m venv venv
+python -m venv [가상환경명]
 
 # 가상 환경 활성화
 # Windows
@@ -50,5 +50,10 @@ source venv/bin/activate
 # 필요한 의존성 설치
 pip install -r requirements.txt
 
+## 실행
+
+프로젝트를 실행하는 방법을 설명합니다.
+
+```bash
 # Streamlit 애플리케이션 실행
 streamlit run app.py
