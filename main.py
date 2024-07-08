@@ -32,20 +32,23 @@ mental = [60, 70, 80, 90]
 
 # 프롬프트 템플릿 정의
 prompt_template = """
-당신은 20년차 TRPG게임 사회자입니다. Playere들의 선택에 따라 시나리오를 자연스럽게 진행하여주세요.
-각 Player들의 직업과 능력치는 특성치에 적혀있으며 상황에 따라 적절하게 활용해주세요.
+당신은 20년차 TRPG게임 사회자입니다.
+현재 The Call of Cthulu 시나리오의 사회자를 맡게 되었습니다.
+Playere들의 선택에 따라 시나리오를 자연스럽게 진행하여주세요.
+시나리오 진행 도중에 주사위를 던져야하는 상황이 발생하면 [Characteristic value]을 참고해주세요.
 답변은 한글로 작성하세요.
 
 다음 사항을 준수하세요:
-- 답변은 진행상황에 대한 짧은 요약 및 Player들에게 제안할 선택지로만 구성하세요.
+- 답변은 상황에 대한 짧은 요약 및 Player들에게 제안할 선택지로만 구성하세요.
 
-다음 내용은 Player들의 특성치입니다.:
-Player 1: {job1}, Strength: {strength1}, Health: {health1}, Size: {size1}, Agility: {agility1}, Look: {look1}, Education: {education1}, IQ: {iq1}, Mental: {mental1}
-Player 2: {job2}, Strength: {strength2}, Health: {health2}, Size: {size2}, Agility: {agility2}, Look: {look2}, Education: {education2}, IQ: {iq2}, Mental: {mental2}
-Player 3: {job3}, Strength: {strength3}, Health: {health3}, Size: {size3}, Agility: {agility3}, Look: {look3}, Education: {education3}, IQ: {iq3}, Mental: {mental3}
-Player 4: {job4}, Strength: {strength4}, Health: {health4}, Size: {size4}, Agility: {agility4}, Look: {look4}, Education: {education4}, IQ: {iq4}, Mental: {mental4}
+#Characteristic value:
+- Player 1: {job1}, Strength: {strength1}, Health: {health1}, Size: {size1}, Agility: {agility1}, Look: {look1}, Education: {education1}, IQ: {iq1}, Mental: {mental1}
+- Player 2: {job2}, Strength: {strength2}, Health: {health2}, Size: {size2}, Agility: {agility2}, Look: {look2}, Education: {education2}, IQ: {iq2}, Mental: {mental2}
+- Player 3: {job3}, Strength: {strength3}, Health: {health3}, Size: {size3}, Agility: {agility3}, Look: {look3}, Education: {education3}, IQ: {iq3}, Mental: {mental3}
+- Player 4: {job4}, Strength: {strength4}, Health: {health4}, Size: {size4}, Agility: {agility4}, Look: {look4}, Education: {education4}, IQ: {iq4}, Mental: {mental4}
 
-# 질문: {question}
+# 상황:
+{question}
 
 # 답변:
 """
@@ -58,7 +61,7 @@ class StreamCallback(BaseCallbackHandler):
 
 # LLM 및 출력 파서 설정
 llm = ChatOpenAI(
-    model="gpt-4",
+    model="gpt-4o",
     temperature=0,
     streaming=True,
     verbose=True,
@@ -144,47 +147,6 @@ with st.spinner("Loading AI..."):
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(user_input)
-
-        # 프롬프트를 생성합니다.
-        formatted_prompt = prompt_template.format(
-            job1=job[0],
-            strength1=strength[0],
-            health1=health[0],
-            size1=size[0],
-            agility1=agility[0],
-            look1=look[0],
-            education1=education[0],
-            iq1=iq[0],
-            mental1=mental[0],
-            job2=job[1],
-            strength2=strength[1],
-            health2=health[1],
-            size2=size[1],
-            agility2=agility[1],
-            look2=look[1],
-            education2=education[1],
-            iq2=iq[1],
-            mental2=mental[1],
-            job3=job[2],
-            strength3=strength[2],
-            health3=health[2],
-            size3=size[2],
-            agility3=agility[2],
-            look3=look[2],
-            education3=education[2],
-            iq3=iq[2],
-            mental3=mental[2],
-            job4=job[3],
-            strength4=strength[3],
-            health4=health[3],
-            size4=size[3],
-            agility4=agility[3],
-            look4=look[3],
-            education4=education[3],
-            iq4=iq[3],
-            mental4=mental[3],
-            question=user_input,
-        )
 
         # AI 응답을 가져옵니다.
         response = chain.invoke({"question": user_input})
