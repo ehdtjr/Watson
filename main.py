@@ -18,6 +18,15 @@ load_dotenv()
 
 print(os.getenv("OPENAI_API_KEY"))
 
+strength = [50, 60, 40, 30]
+health = [50, 70, 60, 40]
+size = [70, 60, 50, 40]
+agility = [80, 70, 60, 50]
+look = [40, 50, 60, 70]
+education = [60, 70, 80, 90]
+iq = [50, 60, 70, 80]
+mental = [60, 70, 80, 90]
+
 # LangSmith 추적을 설정합니다. https://smith.langchain.com
 # !pip install -qU langchain-teddynote
 from langchain_teddynote import logging
@@ -27,9 +36,6 @@ logging.langsmith("CH12-RAG")
 
 # 채팅 기록을 저장할 메모리 초기화
 chat_history = ChatMessageHistory()
-
-if "last_messages" not in st.session_state:
-    st.session_state.last_messages = []
 
 
 # 시나리오 진행과 선택지를 추출하는 함수
@@ -64,7 +70,7 @@ def extract_scenario_and_choices(text):
 def select_prompt_template(user_input, is_intro):
     if is_intro:
         return intro_prompt_template
-    elif st.session_state.last_messages != []:
+    elif "주사위 입력값" in user_input:
         return dice_prompt
     else:
         return prompt
@@ -76,7 +82,7 @@ def build_chain(user_input, is_intro):
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", prompt_template),
-            # MessagesPlaceholder(variable_name=chat_history.messages),
+            MessagesPlaceholder(variable_name="history"),
             ("human", "{question}"),
         ]
     )
@@ -85,15 +91,29 @@ def build_chain(user_input, is_intro):
             "context": retriever,
             "question": RunnablePassthrough(),
         }
+        | runnable
         | prompt
         | llm
         | StrOutputParser()
     )
 
 
+runnable = RunnablePassthrough.assign(
+    history=lambda _: chat_history.messages,
+    question=lambda x: x["question"],
+    strength1=lambda _: strength[0],
+    health1=lambda _: health[0],
+    size1=lambda _: size[0],
+    agility1=lambda _: agility[0],
+    look1=lambda _: look[0],
+    education1=lambda _: education[0],
+    iq1=lambda _: iq[0],
+    mental1=lambda _: mental[0],
+)
+
 # RAG 사전 단계
 # # 단계 1: 문서 로드(Load Documents)
-# loader = PyMuPDFLoader("./Afterschool_Adventure_Time-20-52.pdf")
+# loader = PyMuPDFLoader("./data/Afterschool_Adventure_Time-20-52.pdf")
 # docs = loader.load()
 
 # # 단계 2: 문서 분할(Split Documents)
@@ -185,9 +205,13 @@ dice_prompt = """
 답변은 한글로 작성하세요.
 
 다음 사항을 준수하세요:
-- 주사위 입력값이 들어오면 플레이어의 특성값을 확인하여 결과를 알려주고 시나리오를 진행합니다.
+- [Characteristic value]을 참고하여 주사위 판정을 한 후, 시나리오를 이어서 진행해주세요.
 - 답변은 주사위 결과 대한 시나리오 진행과 3가지 선택지 제공으로 구성됩니다.
 - 답변 형식은 [예제1]을 참고하여 작성해주세요.
+
+#Characteristic value:
+  Strength: {strength1}, Health: {health1}, Size: {size1}, Agility: {agility1}, Look: {look1}, Education: {education1}, IQ: {iq1}, Mental: {mental1}
+  
 
 # 예제1:
     **시나리오 진행:**
@@ -247,11 +271,10 @@ with st.spinner("Loading AI..."):
         print(choices)
         print(dice)
 
-        if "주사위를 굴려" in scenario_progress:
-            st.session_state.last_messages = scenario_progress
-
         # Add assistant message to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
         # Display assistant message in chat message container
         with st.chat_message("assistant"):
             st.markdown(response)
+
+print(chat_history.messages)

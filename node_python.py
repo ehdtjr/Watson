@@ -10,41 +10,58 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_teddynote import logging
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import ChatMessageHistory
-from openai import OpenAI
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from operator import itemgetter
 import re
-import os
+import sys
 
 load_dotenv()
-print(os.getenv("OPENAI_API_KEY"))
-# LangSmith 추적을 설정합니다. https://smith.langchain.com
-# !pip install -qU langchain-teddynote
-from langchain_teddynote import logging
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-    st.session_state.is_intro = True
+from langchain_teddynote import logging
 
 # 프로젝트 이름을 입력합니다.
 logging.langsmith("CH12-RAG")
 
+if "messages" not in st.session_state:
+    st.session_state.is_intro = True
+
+strength = [50, 60, 40, 30]
+health = [50, 70, 60, 40]
+size = [70, 60, 50, 40]
+agility = [80, 70, 60, 50]
+look = [40, 50, 60, 70]
+education = [60, 70, 80, 90]
+iq = [50, 60, 70, 80]
+mental = [60, 70, 80, 90]
+
 # 채팅 기록을 저장할 메모리 초기화
 chat_history = ChatMessageHistory()
+
+# 세션 기록을 저장할 딕셔너리
+store = {}
+
+
+# 세션 ID를 기반으로 세션 기록을 가져오는 함수
+def get_session_history(session_ids):
+    print(f"[대화 세션ID]: {session_ids}")
+    if session_ids not in store:  # 세션 ID가 store에 없는 경우
+        # 새로운 ChatMessageHistory 객체를 생성하여 store에 저장
+        store[session_ids] = ChatMessageHistory()
+    return store[session_ids]  # 해당 세션 ID에 대한 세션 기록 반환
 
 
 # 시나리오 진행과 선택지를 추출하는 함수
 def extract_scenario_and_choices(text):
     # "시나리오 진행" 부분을 추출하는 정규 표현식 패턴
 
-    scenario_pattern = r"시나리오 진행:\s*\*\*(.*?)\*\*"
+    scenario_pattern = r"\*\*시나리오 진행:\*\*\s*(.*?)(?=\n\n|$)"
     scenario_match = re.search(scenario_pattern, text, re.DOTALL)
 
     # 선택지 부분을 추출하는 정규 표현식 패턴
     choices_pattern = r"(\d+\.\s[^\n]+)"
     choices = re.findall(choices_pattern, text)
 
-    if "새 학기의 봄" in text:
-        scenario_progress = text
-    elif scenario_match:
+    if "새 학기의 봄" in text or scenario_match:
         scenario_progress = scenario_match.group(
             1
         ).strip()  # "시나리오 진행" 부분만 반환
@@ -54,9 +71,9 @@ def extract_scenario_and_choices(text):
     dice = False
 
     if re.findall("주사위 입력값을 기다립니다", text):
+        scenario_progress += "\n\n주사위를 굴려주세요."
         dice = True
 
-    # 시나리오, 선택지, 주사위 여부 반환
     return scenario_progress, choices, dice
 
 
@@ -76,21 +93,39 @@ def build_chain(user_input, is_intro):
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", prompt_template),
-            # MessagesPlaceholder(variable_name=chat_history.messages),
+            # MessagesPlaceholder(variable_name="history"),
             ("human", "{question}"),
         ]
     )
     return (
-        {"context": retriever, "question": RunnablePassthrough()}
+        {
+            "context": itemgetter("question") | retriever,
+            "question": itemgetter("question"),
+            "chat_history": itemgetter("chat_history"),
+        }
+        | runnable
         | prompt
         | llm
         | StrOutputParser()
     )
 
 
+runnable = RunnablePassthrough.assign(
+    question=lambda x: x["question"],
+    strength1=lambda _: strength[0],
+    health1=lambda _: health[0],
+    size1=lambda _: size[0],
+    agility1=lambda _: agility[0],
+    look1=lambda _: look[0],
+    education1=lambda _: education[0],
+    iq1=lambda _: iq[0],
+    mental1=lambda _: mental[0],
+)
+
+
 # RAG 사전 단계
 # # 단계 1: 문서 로드(Load Documents)
-# loader = PyMuPDFLoader("Afterschool_Adventure_Time-20-52.pdf")
+# loader = PyMuPDFLoader("./data/Afterschool_Adventure_Time-20-52.pdf")
 # docs = loader.load()
 
 # # 단계 2: 문서 분할(Split Documents)
@@ -118,12 +153,12 @@ retriever = vectorstore.as_retriever()
 intro_prompt_template = """
 당신은 30년 차 TRPG 게임 사회자입니다.
 현재 "방과후 탐사활동기록" 시나리오의 사회자를 맡게 되었습니다.
-아래 예제1과 검색된 context를 참고하여 시나리오의 도입부를 7줄 이내로 작성해주세요.
+아래 예제1과 검색된 context를 참고하여 시나리오의 도입부를 6줄 이내로 작성해주세요.
 답변은 한글로 작성하세요.
 
 다음 사항을 준수하세요:
 - 답변은 시나리오 진행으로 구성됩니다.
-- 답변 형식은 [예제1]을 참고하여 작성하여 7줄 이내로 작성해주세요. 
+- 답변 형식은 [예제1]을 참고하여 작성하여 6줄 이내로 작성해주세요. 
 
 # 예제1:
     **시나리오 진행:**
@@ -134,8 +169,8 @@ intro_prompt_template = """
     학교, 하면 동아리 활동에 열심인 학생들도 있겠지요. 그래요, 여러분처럼요.
     그날따라 여러분은 저마다의 이유로 동아리 활동을 하거나, 또는 부실에서 잠들었다거나, 또는 다른 게임을 했다던가의 등등의 이유로 늦게 하교하는 날이 되었습니다.
 
-  #context:
-  {context}
+#context:
+{context}
 """
 
 # 시나리오 진행 템플릿
@@ -182,9 +217,13 @@ dice_prompt = """
 답변은 한글로 작성하세요.
 
 다음 사항을 준수하세요:
-- 주사위 입력값이 들어오면 플레이어의 특성값을 확인하여 결과를 알려주고 시나리오를 진행합니다.
+- [Characteristic value]을 참고하여 주사위 판정을 한 후, [Previous Chat History] 내용을 이어서 진행해주세요.
 - 답변은 주사위 결과 대한 시나리오 진행과 3가지 선택지 제공으로 구성됩니다.
 - 답변 형식은 [예제1]을 참고하여 작성해주세요.
+
+#Characteristic value:
+  Strength: {strength1}, Health: {health1}, Size: {size1}, Agility: {agility1}, Look: {look1}, Education: {education1}, IQ: {iq1}, Mental: {mental1}
+
 
 # 예제1:
     **시나리오 진행:**
@@ -195,11 +234,11 @@ dice_prompt = """
     2. 대화를 더 듣기 위해 뒤로 물러난다.
     3. 다른 방향으로 이동한다.
 
+#Previous Chat History:
+{chat_history}
+    
 #Question: 
 {question} 
-
-#Context: 
-{context} 
 
 #Answer:
 """
@@ -208,19 +247,41 @@ dice_prompt = """
 # 모델(LLM) 을 생성합니다.
 llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
 
-# client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-user_input = "새 학기의 봄, 동아리 활동, 늦은 저녁"
+def answer(user_input):
+    chain = build_chain(user_input, st.session_state.is_intro)
+    st.session_state.is_intro = False  # 이후부터는 시나리오 진행으로 전환
 
-chain = build_chain(user_input, st.session_state.is_intro)
-st.session_state.is_intro = False  # 이후부터는 시나리오 진행으로 전환
+    print(store)
 
-# AI 응답을 가져옵니다.
-response = chain.invoke(user_input)
+    # 대화를 기록하는 RAG 체인 생성
+    rag_with_history = RunnableWithMessageHistory(
+        chain,
+        get_session_history,  # 세션 기록을 가져오는 함수
+        input_messages_key="question",  # 사용자의 질문이 템플릿 변수에 들어갈 key
+        history_messages_key="chat_history",  # 기록 메시지의 키
+    )
 
-# 시나리오 진행과 선택지를 추출합니다.(dice가 true일 경우 주사위 굴리기?)
-scenario_progress, choices, dice = extract_scenario_and_choices(response)
+    # AI 응답을 가져옵니다.
+    response = rag_with_history.invoke(
+        {"question": user_input},
+        config={"configurable": {"session_id": "rag123"}},
+    )
 
-print(scenario_progress)
-print(choices)
-print(dice)
+    # 시나리오 진행과 선택지를 추출합니다.(dice가 true일 경우 주사위 굴리기?)
+    scenario_progress, choices, dice = extract_scenario_and_choices(response)
+
+    return scenario_progress, choices, dice
+
+
+if __name__ == "__main__":
+    while True:
+        input_str = sys.stdin.readline().strip()
+        if input_str:
+            scenario_progress, choices, dice = answer(input_str)
+
+            print(scenario_progress)
+            print(choices)
+            print(dice)
+
+            sys.stdout.flush()
