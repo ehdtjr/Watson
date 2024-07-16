@@ -12,11 +12,8 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import ChatMessageHistory
 from openai import OpenAI
 import re
-import os
 
 load_dotenv()
-
-print(os.getenv("OPENAI_API_KEY"))
 
 # LangSmith 추적을 설정합니다. https://smith.langchain.com
 # !pip install -qU langchain-teddynote
@@ -27,9 +24,6 @@ logging.langsmith("CH12-RAG")
 
 # 채팅 기록을 저장할 메모리 초기화
 chat_history = ChatMessageHistory()
-
-if "last_messages" not in st.session_state:
-    st.session_state.last_messages = []
 
 
 # 시나리오 진행과 선택지를 추출하는 함수
@@ -64,7 +58,7 @@ def extract_scenario_and_choices(text):
 def select_prompt_template(user_input, is_intro):
     if is_intro:
         return intro_prompt_template
-    elif st.session_state.last_messages != []:
+    elif "주사위 입력값" in user_input:
         return dice_prompt
     else:
         return prompt
@@ -81,10 +75,7 @@ def build_chain(user_input, is_intro):
         ]
     )
     return (
-        {
-            "context": retriever,
-            "question": RunnablePassthrough(),
-        }
+        {"context": retriever, "question": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
@@ -246,9 +237,6 @@ with st.spinner("Loading AI..."):
         print(scenario_progress)
         print(choices)
         print(dice)
-
-        if "주사위를 굴려" in scenario_progress:
-            st.session_state.last_messages = scenario_progress
 
         # Add assistant message to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})

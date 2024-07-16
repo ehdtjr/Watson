@@ -15,21 +15,20 @@ import re
 import os
 
 load_dotenv()
-
 print(os.getenv("OPENAI_API_KEY"))
-
 # LangSmith 추적을 설정합니다. https://smith.langchain.com
 # !pip install -qU langchain-teddynote
 from langchain_teddynote import logging
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    st.session_state.is_intro = True
 
 # 프로젝트 이름을 입력합니다.
 logging.langsmith("CH12-RAG")
 
 # 채팅 기록을 저장할 메모리 초기화
 chat_history = ChatMessageHistory()
-
-if "last_messages" not in st.session_state:
-    st.session_state.last_messages = []
 
 
 # 시나리오 진행과 선택지를 추출하는 함수
@@ -57,6 +56,7 @@ def extract_scenario_and_choices(text):
     if re.findall("주사위 입력값을 기다립니다", text):
         dice = True
 
+    # 시나리오, 선택지, 주사위 여부 반환
     return scenario_progress, choices, dice
 
 
@@ -64,7 +64,7 @@ def extract_scenario_and_choices(text):
 def select_prompt_template(user_input, is_intro):
     if is_intro:
         return intro_prompt_template
-    elif st.session_state.last_messages != []:
+    elif "주사위 입력값" in user_input:
         return dice_prompt
     else:
         return prompt
@@ -81,10 +81,7 @@ def build_chain(user_input, is_intro):
         ]
     )
     return (
-        {
-            "context": retriever,
-            "question": RunnablePassthrough(),
-        }
+        {"context": retriever, "question": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
@@ -93,7 +90,7 @@ def build_chain(user_input, is_intro):
 
 # RAG 사전 단계
 # # 단계 1: 문서 로드(Load Documents)
-# loader = PyMuPDFLoader("./Afterschool_Adventure_Time-20-52.pdf")
+# loader = PyMuPDFLoader("Afterschool_Adventure_Time-20-52.pdf")
 # docs = loader.load()
 
 # # 단계 2: 문서 분할(Split Documents)
@@ -211,47 +208,19 @@ dice_prompt = """
 # 모델(LLM) 을 생성합니다.
 llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
 
-st.title("방과후 탐사활동기록")
+# client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Set OpenAI API key from Streamlit secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+user_input = "새 학기의 봄, 동아리 활동, 늦은 저녁"
 
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-    st.session_state.is_intro = True
+chain = build_chain(user_input, st.session_state.is_intro)
+st.session_state.is_intro = False  # 이후부터는 시나리오 진행으로 전환
 
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# AI 응답을 가져옵니다.
+response = chain.invoke(user_input)
 
-with st.spinner("Loading AI..."):
-    if user_input := st.chat_input("What is up?"):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        # Display user message in chat message container
-        with st.chat_message("user"):
-            st.markdown(user_input)
+# 시나리오 진행과 선택지를 추출합니다.(dice가 true일 경우 주사위 굴리기?)
+scenario_progress, choices, dice = extract_scenario_and_choices(response)
 
-        chain = build_chain(user_input, st.session_state.is_intro)
-        st.session_state.is_intro = False  # 이후부터는 시나리오 진행으로 전환
-
-        # AI 응답을 가져옵니다.
-        response = chain.invoke(user_input)
-
-        # 시나리오 진행과 선택지를 추출합니다.(dice가 true일 경우 주사위 굴리기?)
-        scenario_progress, choices, dice = extract_scenario_and_choices(response)
-
-        print(scenario_progress)
-        print(choices)
-        print(dice)
-
-        if "주사위를 굴려" in scenario_progress:
-            st.session_state.last_messages = scenario_progress
-
-        # Add assistant message to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        # Display assistant message in chat message container
-        with st.chat_message("assistant"):
-            st.markdown(response)
+print(scenario_progress)
+print(choices)
+print(dice)
