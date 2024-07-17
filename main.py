@@ -10,13 +10,13 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_teddynote import logging
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from openai import OpenAI
+from operator import itemgetter
 import re
 import os
 
 load_dotenv()
-
-print(os.getenv("OPENAI_API_KEY"))
 
 strength = [50, 60, 40, 30]
 health = [50, 70, 60, 40]
@@ -35,23 +35,33 @@ from langchain_teddynote import logging
 logging.langsmith("CH12-RAG")
 
 # 채팅 기록을 저장할 메모리 초기화
-chat_history = ChatMessageHistory()
+# chat_history = ChatMessageHistory()
+
+# 세션 기록을 저장할 딕셔너리
+store = {}
+
+
+# 세션 ID를 기반으로 세션 기록을 가져오는 함수
+def get_session_history(session_ids):
+    print(f"[대화 세션ID]: {session_ids}")
+    if session_ids not in store:  # 세션 ID가 store에 없는 경우
+        # 새로운 ChatMessageHistory 객체를 생성하여 store에 저장
+        store[session_ids] = ChatMessageHistory()
+    return store[session_ids]  # 해당 세션 ID에 대한 세션 기록 반환
 
 
 # 시나리오 진행과 선택지를 추출하는 함수
 def extract_scenario_and_choices(text):
     # "시나리오 진행" 부분을 추출하는 정규 표현식 패턴
 
-    scenario_pattern = r"시나리오 진행:\s*\*\*(.*?)\*\*"
+    scenario_pattern = r"\*\*시나리오 진행:\*\*\s*(.*?)(?=\n\n|$)"
     scenario_match = re.search(scenario_pattern, text, re.DOTALL)
 
     # 선택지 부분을 추출하는 정규 표현식 패턴
     choices_pattern = r"(\d+\.\s[^\n]+)"
     choices = re.findall(choices_pattern, text)
 
-    if "새 학기의 봄" in text:
-        scenario_progress = text
-    elif scenario_match:
+    if "새 학기의 봄" in text or scenario_match:
         scenario_progress = scenario_match.group(
             1
         ).strip()  # "시나리오 진행" 부분만 반환
@@ -61,6 +71,7 @@ def extract_scenario_and_choices(text):
     dice = False
 
     if re.findall("주사위 입력값을 기다립니다", text):
+        scenario_progress += "\n\n주사위를 굴려주세요."
         dice = True
 
     return scenario_progress, choices, dice
@@ -82,14 +93,15 @@ def build_chain(user_input, is_intro):
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", prompt_template),
-            MessagesPlaceholder(variable_name="history"),
+            # MessagesPlaceholder(variable_name="history"),
             ("human", "{question}"),
         ]
     )
     return (
         {
-            "context": retriever,
-            "question": RunnablePassthrough(),
+            "context": itemgetter("question") | retriever,
+            "question": itemgetter("question"),
+            "chat_history": itemgetter("chat_history"),
         }
         | runnable
         | prompt
@@ -99,7 +111,6 @@ def build_chain(user_input, is_intro):
 
 
 runnable = RunnablePassthrough.assign(
-    history=lambda _: chat_history.messages,
     question=lambda x: x["question"],
     strength1=lambda _: strength[0],
     health1=lambda _: health[0],
@@ -157,8 +168,11 @@ intro_prompt_template = """
     학교, 하면 동아리 활동에 열심인 학생들도 있겠지요. 그래요, 여러분처럼요.
     그날따라 여러분은 저마다의 이유로 동아리 활동을 하거나, 또는 부실에서 잠들었다거나, 또는 다른 게임을 했다던가의 등등의 이유로 늦게 하교하는 날이 되었습니다.
 
-  #context:
-  {context}
+#context:
+{context}
+
+#Previous Chat History:
+{chat_history}
 """
 
 # 시나리오 진행 템플릿
@@ -193,6 +207,9 @@ Player들의 선택지를 참고하여 시나리오를 진행하려고 합니다
 #Question: 
 {question} 
 
+#Previous Chat History:
+{chat_history}
+
 #Context: 
 {context} 
 
@@ -205,13 +222,12 @@ dice_prompt = """
 답변은 한글로 작성하세요.
 
 다음 사항을 준수하세요:
-- [Characteristic value]을 참고하여 주사위 판정을 한 후, 시나리오를 이어서 진행해주세요.
+- [Characteristic value]를 참고하여 주사위 판정을 한 후, 이전 대화를 이어서 진행해주세요.
 - 답변은 주사위 결과 대한 시나리오 진행과 3가지 선택지 제공으로 구성됩니다.
 - 답변 형식은 [예제1]을 참고하여 작성해주세요.
 
 #Characteristic value:
   Strength: {strength1}, Health: {health1}, Size: {size1}, Agility: {agility1}, Look: {look1}, Education: {education1}, IQ: {iq1}, Mental: {mental1}
-  
 
 # 예제1:
     **시나리오 진행:**
@@ -222,11 +238,11 @@ dice_prompt = """
     2. 대화를 더 듣기 위해 뒤로 물러난다.
     3. 다른 방향으로 이동한다.
 
+#Previous Chat History:
+{chat_history}
+    
 #Question: 
 {question} 
-
-#Context: 
-{context} 
 
 #Answer:
 """
@@ -254,6 +270,7 @@ with st.spinner("Loading AI..."):
     if user_input := st.chat_input("What is up?"):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": user_input})
+
         # Display user message in chat message container
         with st.chat_message("user"):
             st.markdown(user_input)
@@ -261,8 +278,19 @@ with st.spinner("Loading AI..."):
         chain = build_chain(user_input, st.session_state.is_intro)
         st.session_state.is_intro = False  # 이후부터는 시나리오 진행으로 전환
 
+        # 대화를 기록하는 RAG 체인 생성
+        rag_with_history = RunnableWithMessageHistory(
+            chain,
+            get_session_history,  # 세션 기록을 가져오는 함수
+            input_messages_key="question",  # 사용자의 질문이 템플릿 변수에 들어갈 key
+            history_messages_key="chat_history",  # 기록 메시지의 키
+        )
+
         # AI 응답을 가져옵니다.
-        response = chain.invoke(user_input)
+        response = rag_with_history.invoke(
+            {"question": user_input},
+            config={"configurable": {"session_id": "rag123"}},
+        )
 
         # 시나리오 진행과 선택지를 추출합니다.(dice가 true일 경우 주사위 굴리기?)
         scenario_progress, choices, dice = extract_scenario_and_choices(response)
@@ -273,8 +301,9 @@ with st.spinner("Loading AI..."):
 
         # Add assistant message to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
+
         # Display assistant message in chat message container
         with st.chat_message("assistant"):
             st.markdown(response)
 
-print(chat_history.messages)
+print(store)
