@@ -20,6 +20,9 @@ TRPG AI Game Master는 전통적인 TRPG(Tabletop Role-Playing Game)에서 사�
 
 이 프로젝트는 TRPG 게임의 시나리오 내용을 벡터 데이터베이스(Vector DB)에 인덱싱한 후 이를 검색(Retriever)하여 사용하는 RAG(Retrieval-Augmented Generation) 방식을 사용합니다. 또한, 상황별 프롬프트 템플릿을 선택할 수 있도록 프롬프트 엔지니어링을 적용하였으며, 프롬프트 템플릿 내에는 벡터 DB에 저장된 내용을 context로 가져오고, 이전 대화 내용을 chat_history로 불러와 시나리오가 자연스럽게 이어지도록 설계되었습니다.
 
+![image](https://github.com/user-attachments/assets/ce991a41-44a4-423b-9fe3-dcba4afe03f8)
+
+
 ## 기술 스택
 
 이 프로젝트에서 사용되는 주요 기술 스택은 다음과 같습니다:
@@ -83,4 +86,3 @@ TRPG AI Game Master는 시나리오 내용을 벡터 데이터베이스에 인�
 상황에 따라 다른 프롬프트 템플릿을 선택하여 게임의 진행을 돕습니다. 프롬프트 템플릿은 벡터 DB에서 검색된 시나리오 내용을 컨텍스트로 가져오며, 이전 대화 내용을 chat_history로 포함하여 자연스럽게 이야기가 이어질 수 있도록 합니다.
 
 이 프로젝트를 통해 전통적인 TRPG 게임의 사회자 역할을 AI가 대체하여, 더 많은 사람들이 쉽게 TRPG를 즐길 수 있기를 바랍니다.
-
